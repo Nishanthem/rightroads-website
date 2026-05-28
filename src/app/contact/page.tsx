@@ -2,13 +2,29 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { submitToGoogleSheets } from "@/lib/google-sheets";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setError("");
+
+    const fd = new FormData(e.currentTarget);
+    const data: Record<string, string> = {};
+    fd.forEach((v, k) => { data[k] = v.toString(); });
+
+    const result = await submitToGoogleSheets("contact", data);
+    setSubmitting(false);
+    if (result.success) {
+      setSubmitted(true);
+    } else {
+      setError(result.message);
+    }
   }
 
   return (
@@ -116,8 +132,9 @@ export default function ContactPage() {
                     <label htmlFor="message" className="block text-sm font-medium text-gray-700">Message</label>
                     <textarea id="message" name="message" rows={4} required className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" />
                   </div>
-                  <button type="submit" className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white shadow transition-colors hover:bg-primary-dark">
-                    Send Message
+                  {error && <p className="text-sm text-red-600">{error}</p>}
+                  <button type="submit" disabled={submitting} className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white shadow transition-colors hover:bg-primary-dark disabled:opacity-50">
+                    {submitting ? "Sending..." : "Send Message"}
                   </button>
                 </form>
               )}
